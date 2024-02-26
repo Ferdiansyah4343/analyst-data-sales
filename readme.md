@@ -19,6 +19,5 @@ pip install -r requirements.txt
 
 3. Jalankan skrip Python untuk melakukan analisis data penjualan.
 ```
-python
 python main.py
 ```
