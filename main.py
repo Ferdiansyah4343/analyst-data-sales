@@ -1,8 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sqlalchemy import create_engine
-import numpy as np
 
+# Membuat koneksi ke database
 engine = create_engine('mysql+pymysql://root:@localhost/da_sales_tech')
 
 # Analisis tren penjualan dari bulan ke bulan
@@ -13,9 +14,8 @@ WHERE order_date BETWEEN '2024-02-01' AND '2024-04-25'
 GROUP BY MONTH(order_date)
 """
 
+# Membaca data dari database
 dtp = pd.read_sql_query(query_tren_penjualan, engine)
-x_dtp = dtp['bulan']
-y_dtp = dtp['total_penjualan']
 
 # Segmentasi pelanggan
 query_segmentasi_pelanggan = """
@@ -33,45 +33,45 @@ FROM (
 ) AS pembelian_pelanggan
 GROUP BY segmentasi"""
 
+# Membaca data dari database
 dsp = pd.read_sql_query(query_segmentasi_pelanggan, engine)
-y_dsp = np.array(dsp['jumlah_pelanggan'])
-mylabel = list(dsp['segmentasi'])
 
 # Produk terlaris
 query_produk_terlaris = """
 SELECT
     product_name,
-    SUM(quantity) AS total_penjualan,
-    SUM(unit_price * quantity) AS total_pendapatan
+    SUM(quantity) AS total_penjualan
 FROM OrderDetails
 JOIN Products ON OrderDetails.product_id = Products.product_id
 GROUP BY product_name
-ORDER BY total_penjualan DESC, total_pendapatan DESC;
+ORDER BY total_penjualan DESC
+LIMIT 5;
 """
+
+# Membaca data dari database
 dpt = pd.read_sql_query(query_produk_terlaris, engine)
-dpt_head = dpt.head()
-dpt_tail = dpt.tail()
-x_dpt = np.array(list(dpt_tail['product_name']))
-y_dpt = np.array(dpt_tail['total_penjualan'])
 
 # Plotting
-fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+plt.figure(figsize=(16, 6))
 
 # Plot tren penjualan
-axs[0].plot(x_dtp, y_dtp)
-axs[0].set_title('Tren Penjualan')
-axs[0].set_xlabel('Bulan')
-axs[0].set_ylabel('Total Penjualan')
+plt.subplot(1, 3, 1)
+sns.lineplot(data=dtp, x='bulan', y='total_penjualan', marker='o')
+plt.title('Tren Penjualan')
+plt.xlabel('Bulan')
+plt.ylabel('Total Penjualan')
 
 # Plot segmentasi pelanggan
-axs[1].pie(y_dsp, labels=mylabel, autopct='%1.1f%%')
-axs[1].set_title('Segmentasi Pelanggan')
+plt.subplot(1, 3, 2)
+plt.pie(dsp['jumlah_pelanggan'], labels=dsp['segmentasi'], autopct='%1.1f%%', startangle=140)
+plt.title('Segmentasi Pelanggan')
 
 # Plot produk terlaris
-axs[2].bar(x_dpt, y_dpt)
-axs[2].set_title('Produk Terlaris')
-axs[2].set_xlabel('Nama Produk')
-axs[2].set_ylabel('Total Penjualan')
+plt.subplot(1, 3, 3)
+sns.barplot(data=dpt, x='total_penjualan', y='product_name', palette='viridis')
+plt.title('Produk Terlaris')
+plt.xlabel('Total Penjualan')
+plt.ylabel('Nama Produk')
 
 plt.tight_layout()
 plt.show()
